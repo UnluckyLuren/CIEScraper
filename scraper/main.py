@@ -459,7 +459,7 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
                 scrollsVacios = 0
 
             if scrollsVacios >= 8:
-                print("[WARN] El DOM dejo de entregar publicaciones nuevas.")
+                print("[WARN]El DOM dejo de entregar publicaciones nuevas.")
                 break
 
             pasoScroll = random.randint(1600, 2400)
