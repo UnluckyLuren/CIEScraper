@@ -6,73 +6,119 @@
     <style>
         :root { --primary: #003366; --btn: #0b57d0; --btn-hover: #0842a0; --bg: #f4f6f9; --card-bg: #ffffff; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); margin: 0; padding: 20px 40px; color: #222; }
-        h1 { color: var(--primary); margin-bottom: 5px; }
-        
+        h1 { color: var(--primary); margin-bottom: 5px; display: flex; align-items: center; gap: 10px; }
+
+        .svg-icon { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; flex-shrink: 0; }
+        .svg-icon-lg { width: 26px; height: 26px; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; flex-shrink: 0; }
+
         .top-bar { display: flex; flex-wrap: wrap; gap: 12px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; align-items: center; border: 1px solid #d0d7de;}
-        .search-box { flex: 1; min-width: 250px; padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
-        .filter-select { padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; background: #fff; cursor: pointer; }
-        
+
+        .input-icon-wrap { position: relative; display: flex; align-items: center; flex: 1; min-width: 250px; }
+        .input-icon-wrap .svg-icon { position: absolute; left: 11px; color: #6c757d; pointer-events: none; }
+        .search-box { width: 100%; padding: 9px 9px 9px 34px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+
+        .select-icon-wrap { position: relative; display: inline-flex; align-items: center; }
+        .select-icon-wrap .svg-icon { position: absolute; left: 10px; color: #495057; pointer-events: none; }
+        .filter-select { padding: 9px 12px 9px 32px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; background: #fff; cursor: pointer; color: #222; }
+
         .date-group { display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 4px 10px; border-radius: 6px; border: 1px solid #dee2e6; }
-        .date-group label { font-size: 13px; font-weight: 600; color: #495057; }
+        .date-group label { font-size: 13px; font-weight: 600; color: #495057; display: inline-flex; align-items: center; gap: 5px; }
         .date-group input[type="date"] { border: 1px solid #ccc; border-radius: 4px; padding: 5px; font-size: 13px; cursor: pointer;}
-        
+
         #records-container { display: flex; flex-direction: column; gap: 20px; }
         .registro-card { background: var(--card-bg); border: 1px solid #d0d7de; border-radius: 8px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.3s ease; }
-        
+
         .registro-card.is-copied { opacity: 0.55; filter: grayscale(85%); background: #e9ecef; border-color: #ced4da; }
         .registro-card.is-copied .registro-header { background: #dee2e6; }
         .registro-card.is-copied .mark-btn { background: #198754; pointer-events: none; }
-        .registro-card.is-copied .mark-btn::after { content: " (Guardado)"; }
-        
-        .registro-header { display: flex; justify-content: space-between; align-items: center; background: #eef2f7; padding: 12px 16px; border-radius: 6px; margin-bottom: 12px; }
-        
-        .btn-group { display: flex; gap: 8px; }
-        button, .fb-btn { padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: 600; border: none; transition: 0.2s; font-size: 13px; box-sizing: border-box; font-family: inherit;}
+        .registro-card.is-copied .mark-btn span::after { content: " (Guardado)"; }
+
+        .registro-header { display: flex; justify-content: space-between; align-items: center; background: #eef2f7; padding: 12px 16px; border-radius: 6px; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
+
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        button, .fb-btn { padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: 600; border: none; transition: 0.2s; font-size: 13px; box-sizing: border-box; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
         .copy-btn { background: var(--btn); color: #fff; }
         .copy-btn:hover { background: var(--btn-hover); }
         .mark-btn { background: #6c757d; color: #fff; }
         .mark-btn:hover { background: #5a6268; }
-        .fb-btn { background: #1877f2; color: #fff; text-decoration: none; display: inline-flex; align-items: center; }
+        .fb-btn { background: #1877f2; color: #fff; text-decoration: none; }
         .fb-btn:hover { background: #166fe5; color: #fff; }
 
         .card-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 12px; }
-        .badge { padding: 4px 8px; border-radius: 12px; background: #e2e8f0; color: #334155; font-weight: 500; }
-        
+        .badge { padding: 4px 10px; border-radius: 12px; background: #e2e8f0; color: #334155; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }
+
         .html-box { width: 100%; height: 150px; font-family: Consolas, monospace; font-size: 12px; padding: 12px; border: 1px solid #ccc; border-radius: 4px; background: #1e1e1e; color: #d4d4d4; box-sizing: border-box; resize: vertical; }
         .preview-box { margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; }
-        .preview-box summary { cursor: pointer; font-weight: bold; color: var(--btn); }
+        .preview-box summary { cursor: pointer; font-weight: bold; color: var(--btn); display: inline-flex; align-items: center; gap: 6px; list-style: none; }
+        .preview-box summary::-webkit-details-marker { display: none; }
         .preview-render { margin-top: 15px; padding: 20px; border: 1px solid #e0e0e0; background: #fafafa; border-radius: 6px; }
         .instruccion { margin: 0 0 8px 0; font-size: 13px; color: #555; }
-        
+
         .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 30px; padding-bottom: 40px; flex-wrap: wrap;}
         .pagination button { background: #fff; border: 1px solid #d0d7de; color: #333; padding: 8px 14px; }
         .pagination button:hover:not(:disabled) { background: #eef2f7; }
         .pagination button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
         .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
-        .stats { font-size: 14px; color: #555; margin-bottom: 15px; font-weight: 500;}
+        .stats { font-size: 14px; color: #555; margin-bottom: 15px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
     </style>
 </head>
 <body>
-    <h1>Catálogo Inteligente de Eventos CUCEI</h1>
-    
+    <!-- Definición de Iconos SVG Formales -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="icon-catalog" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
+        <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></symbol>
+        <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></symbol>
+        <symbol id="icon-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></symbol>
+        <symbol id="icon-building" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></symbol>
+        <symbol id="icon-sliders" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></symbol>
+        <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></symbol>
+        <symbol id="icon-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></symbol>
+        <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></symbol>
+    </svg>
+
+    <h1>
+        <svg class="svg-icon-lg"><use href="#icon-catalog"></use></svg>
+        Catálogo Inteligente de Eventos CUCEI
+    </h1>
+
     <div class="top-bar">
-        <input type="text" id="search-box" class="search-box" placeholder="🔍 Buscar por nombre (mín. 3 letras)...">
-        
+        <div class="input-icon-wrap">
+            <svg class="svg-icon"><use href="#icon-search"></use></svg>
+            <input type="text" id="search-box" class="search-box" placeholder="Buscar por nombre (mín. 3 letras)...">
+        </div>
+
         <div class="date-group">
-            <label>📅 Desde:</label>
+            <label><svg class="svg-icon"><use href="#icon-calendar"></use></svg> Desde:</label>
             <input type="date" id="filter-date-start">
             <label>Hasta:</label>
             <input type="date" id="filter-date-end">
         </div>
-        
-        <select id="filter-category" class="filter-select"><option value="">📂 Todas las Clasificaciones</option></select>
-        <select id="filter-ods" class="filter-select"><option value="">🌍 Todos los ODS</option></select>
-        <select id="filter-dept" class="filter-select"><option value="">🏢 Todas las Dependencias</option></select>
-        <select id="filter-state" class="filter-select">
-            <option value="">⚙️ Todos los estados</option>
-            <option value="new" selected>✨ Solo Nuevos (Sin copiar)</option>
-            <option value="copied">✅ Solo Ya Copiados</option>
-        </select>
+
+        <div class="select-icon-wrap">
+            <svg class="svg-icon"><use href="#icon-folder"></use></svg>
+            <select id="filter-category" class="filter-select"><option value="">Todas las Clasificaciones</option></select>
+        </div>
+
+        <div class="select-icon-wrap">
+            <svg class="svg-icon"><use href="#icon-globe"></use></svg>
+            <select id="filter-ods" class="filter-select"><option value="">Todos los ODS</option></select>
+        </div>
+
+        <div class="select-icon-wrap">
+            <svg class="svg-icon"><use href="#icon-building"></use></svg>
+            <select id="filter-dept" class="filter-select"><option value="">Todas las Dependencias</option></select>
+        </div>
+
+        <div class="select-icon-wrap">
+            <svg class="svg-icon"><use href="#icon-sliders"></use></svg>
+            <select id="filter-state" class="filter-select">
+                <option value="">Todos los estados</option>
+                <option value="new" selected>Solo Nuevos (Sin copiar)</option>
+                <option value="copied">Solo Ya Copiados</option>
+            </select>
+        </div>
     </div>
 
     <div class="stats" id="stats-text">Cargando registros...</div>
@@ -26879,10 +26925,10 @@
             const container = document.getElementById('records-container');
             const pagination = document.getElementById('pagination');
             const statsText = document.getElementById('stats-text');
-            
+
             const rawElements = Array.from(document.querySelectorAll('.registro-card'));
             const copiedIds = JSON.parse(localStorage.getItem('cucei_copied_records') || '[]');
-            
+
             function parseCustomDate(dStr) {
                 if(!dStr) return null;
                 const match = dStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
@@ -26899,7 +26945,7 @@
                 const id = el.getAttribute('data-id');
                 const isCopied = copiedIds.includes(id);
                 if(isCopied) el.classList.add('is-copied');
-                
+
                 let odsArr = [];
                 try { odsArr = JSON.parse(el.getAttribute('data-ods')); } catch(e) {}
 
@@ -26922,7 +26968,7 @@
             function initDropdowns() {
                 const cats = [...new Set(recordData.map(r => r.category))].filter(Boolean).sort();
                 const depts = [...new Set(recordData.map(r => r.dept))].filter(Boolean).sort();
-                
+
                 let allOds = [];
                 recordData.forEach(r => { if(r.odsList) allOds = allOds.concat(r.odsList); });
                 const uniqueOds = [...new Set(allOds)].filter(Boolean).sort();
@@ -26938,7 +26984,7 @@
                 const vOds = filterOds.value;
                 const vDept = filterDept.value;
                 const vState = filterState.value;
-                
+
                 let dStart = dateStart.value ? new Date(dateStart.value + 'T00:00:00') : null;
                 let dEnd = dateEnd.value ? new Date(dateEnd.value + 'T23:59:59') : null;
 
@@ -26947,11 +26993,11 @@
                     const mCat = vCat ? r.category === vCat : true;
                     const mDept = vDept ? r.dept === vDept : true;
                     const mOds = vOds ? r.odsList.includes(vOds) : true;
-                    
+
                     let mDate = true;
                     if (dStart || dEnd) {
                         if (!r.dateObj) {
-                            mDate = false; 
+                            mDate = false;
                         } else {
                             if (dStart && r.dateObj < dStart) mDate = false;
                             if (dEnd && r.dateObj > dEnd) mDate = false;
@@ -26978,7 +27024,7 @@
                 container.innerHTML = '';
                 const totalItems = filtered.length;
                 const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-                
+
                 if(currentPage > totalPages) currentPage = totalPages;
 
                 const startIdx = (currentPage - 1) * itemsPerPage;
@@ -26987,7 +27033,7 @@
                 slice.forEach(r => container.appendChild(r.el));
 
                 statsText.innerHTML = `Mostrando ${slice.length} registros (de ${totalItems} encontrados) | Página ${currentPage} de ${totalPages}`;
-                
+
                 renderPagination(totalPages);
             }
 
@@ -27040,7 +27086,7 @@
                     btnElement.style.background = "#188038";
                     setTimeout(() => {
                         btnElement.innerText = originalText;
-                        btnElement.style.background = ""; 
+                        btnElement.style.background = "";
                     }, 2000);
                 });
             };
