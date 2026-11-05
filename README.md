@@ -2,7 +2,7 @@
 
 Herramienta interna desarrollada para la Coordinación de Ingeniería en Computación / CIE del Centro Universitario de Ciencias Exactas e Ingenierías (CUCEI - UdeG). 
 
-Este sistema automatiza la extracción de publicaciones desde la página oficial de Facebook de CUCEI, estructura la información, la traduce al inglés, clasifica su impacto en los Objetivos de Desarrollo Sostenible (ODS) y genera los bloques HTML con el formato requerido por el gestor de contenidos (Drupal) del portal institucional de eventos.
+Este sistema automatiza la extracción de publicaciones desde la página oficial de Facebook de CUCEI, estructura la información, la traduce al inglés, clasifica su impacto en los Objetivos de Desarrollo Sostenible (ODS) y genera los bloques HTML con el formato requerido por el gestor de contenidos del portal institucional de eventos de CUCEI.
 
 ---
 
@@ -14,7 +14,7 @@ Gran parte de las actividades académicas, talleres, conferencias y campañas de
 2. Redactar una nota formal a partir del texto de la red social.
 3. Traducir el título, resumen y cuerpo de la nota al inglés.
 4. Identificar a qué Objetivo de Desarrollo Sostenible (ODS / SDG) aporta el evento.
-5. Maquetar todo manualmente en etiquetas HTML compatibles con los campos de Drupal.
+5. Maquetar todo manualmente en etiquetas HTML compatibles con los campos del portal.
 
 Inicialmente se probó una integración con servicios externos (Apify), pero el costo por ejecución y los límites de créditos hacían inviable procesar cientos de eventos históricos. Por ello, se construyó un microservicio propio alojado localmente.
 
@@ -28,7 +28,7 @@ El proyecto se divide en dos componentes principales que corren sobre un servido
 +-----------------------+       POST /scrape        +-----------------------------+
 |                       | ------------------------> |  Contenedor Scraper (API)   |
 |     Flujo en n8n      |                           |  FastAPI + Playwright       |
-|   (Orquestador Local) | <------------------------ |  Extracción DOM + GraphQL   |
+|       (Local)         | <------------------------ |  Extracción DOM + GraphQL   |
 +-----------------------+    JSON (Posts + Fechas)  +-----------------------------+
            |
            | Lotes de 5 registros
@@ -64,7 +64,7 @@ El flujo automatizado en **n8n** recibe el arreglo JSON directamente desde el co
 
 ## Características del Catálogo HTML Generado
 
-El archivo final (`Eventos_CUCEI_2025_Bloques_HTML.html`) no es solo un documento estático; incluye una interfaz de trabajo con:
+El archivo final (`Eventos_CUCEI_2025_Bloques_HTML.html`) incluye una interfaz de trabajo con:
 * **Filtros dinámicos:** Búsqueda por nombre, rango de fechas, dependencia organizadora, clasificación y ODS.
 * **Control de progreso (`localStorage`):** Botón para marcar eventos como "Ya usados", los cuales se atenúan visualmente y se guardan en el navegador para no duplicar cargas en el portal de CUCEI.
 * **Copiado en un clic:** Botón directo para copiar el bloque HTML limpio al portapapeles y pegarlo en el editor de Drupal.
@@ -91,14 +91,14 @@ cd cucei-cie-fb-migrator/scraper
 Colocar el archivo de cookies en la carpeta correspondiente:
 ```bash
 mkdir -p cookies
-cp /ruta/a/tus/fb_cookies.json ./cookies/fb_cookies.json
+cp /ruta/a/las/fb_cookies.json ./cookies/fb_cookies.json
 ```
 
 Construir e iniciar el contenedor:
 ```bash
 sudo docker compose up -d --build
 ```
-El servicio quedará escuchando en el puerto `8085`.
+El servicio se quedará escuchando en el puerto `8085`.
 
 ### 2. Uso de la API del Scraper
 Puedes probar la extracción directamente por terminal o desde el nodo `HTTP Request` de n8n enviando un `POST` a `/scrape-sync`:
