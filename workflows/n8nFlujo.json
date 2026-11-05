@@ -1,0 +1,295 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "64f5ce34-302b-4290-962a-7581306d8989",
+      "name": "Ejecutar Manualmente",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "id": "e1633cf7-2bb9-42a2-b1de-d9218e07554e",
+      "name": "Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        320,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet loteTexto = \"\";\n\nitems.forEach((item) => {\n    const d = item.json;\n    loteTexto += `=== REGISTRO_ID: ${d.id_registro} ===\\n`;\n    loteTexto += `Nombre: ${d.nombre}\\n`;\n    loteTexto += `Fecha en Excel: ${d.fecha}\\n`;\n    loteTexto += `Clasificación: ${d.clasificacion}\\n`;\n    loteTexto += `Dependencia organizadora: ${d.dependencia}\\n`;\n    loteTexto += `Lugar: ${d.lugar}\\n`;\n    loteTexto += `Link Facebook: ${d.link_publicacion}\\n`;\n    loteTexto += `Evidencia URL/Ruta: ${d.carpeta_evidencia || \"SIN_IMAGEN_EN_EXCEL\"}\\n`;\n    loteTexto += `Descripción base: ${d.descripcion_corta}\\n`;\n    loteTexto += `ODS en Excel: ${d.ods_registrados}\\n`;\n    loteTexto += `Datos de asistencia en Excel: ${d.asistencia_registrada}\\n\\n`;\n});\n\nreturn [{\n    json: {\n        LoteRegistrosExcel: loteTexto\n    }\n}];"
+      },
+      "id": "60da3e54-aa53-411e-b643-aa17f6a0bc99",
+      "name": "Preparar Lote",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "===Eres un redactor institucional bilingüe (Español/Inglés) y analista experto en sostenibilidad de la Universidad de Guadalajara (CUCEI).\nTu tarea es analizar cada registro proveniente del Excel de eventos, revisar qué campos ya tienen datos y AUTOCOMPLETAR de forma coherente, formal y detallada todos los campos que falten o estén incompletos, generando además su versión traducida al inglés.\n\n<REGLAS_DE_AUTOCOMPLETADO_Y_TRADUCCION>\n1. NOMBRE (nombre_es y nombre_en): Conserva el nombre del evento en español y tradúcelo con precisión al inglés.\n2. FECHA (fecha_es y fecha_en): Usa EXACTAMENTE la \"Fecha en Excel\" proporcionada en el registro (que ya viene extraída de Facebook en formato DD/MM/YYYY). NO inventes fechas. Solo si dice \"Sin fecha\", intenta extraerla del texto de la descripción; si no hay ninguna fecha en el texto, coloca \"Sin fecha\". En español conserva DD/MM/YYYY y en inglés conviértela a MM/DD/YYYY.\n3. CLASIFICACIÓN (clasificacion_es y clasificacion_en): Conserva la clasificación en español (ej. \"Campaña\", \"Conferencia\", \"Taller/Curso\", \"Otro\") y tradúcela al inglés (\"Campaign\", \"Conference\", \"Workshop/Course\", \"Other\").\n4. DEPENDENCIA ORGANIZADORA (dependencia_es y dependencia_en): Conserva la dependencia organizadora.\n5. DESCRIPCIÓN GENERAL (descripcion_general_es y overview_en): Toma la \"Descripción base\" y el \"Lugar\" del Excel para redactar un párrafo formal de 3 a 4 líneas que explique el propósito de la iniciativa y a quién estuvo dirigida (comunidad universitaria y/o público general).\n6. OBSERVACIONES (observaciones_es y remarks_en): Autocompleta un párrafo analítico explicando cómo esta actividad contribuyó al bienestar, formación, prevención o desarrollo de la comunidad de CUCEI.\n7. NOTA COMPLETA (3 párrafos separados en español: nota_p1_es, nota_p2_es, nota_p3_es; y 3 párrafos en inglés: note_p1_en, note_p2_en, note_p3_en):\n   - Párrafo 1: Apertura informativa invitando o contextualizando el evento, lugar y alcance.\n   - Párrafo 2: Detalle de las actividades, beneficios o temas tratados y el rol de la dependencia organizadora.\n   - Párrafo 3: Menciona que la acción se difundió a través de redes sociales invitando a la comunidad a participar, utilizando los hashtags #SomosCUCEI y #ComunidadCUCEI para fortalecer la comunicación y alcance.\n8. ODS (ods_lista_es y sdg_lista_en): Convierte los ODS del registro al formato exacto \"ODS X: Nombre\" en español (ej. [\"ODS 3: Salud y bienestar\"]) y \"SDG X: Official Name\" en inglés (ej. [\"SDG 3: Good Health and Well-being\"]). Si falta, infiere el más adecuado.\n9. DATOS DE ASISTENCIA (asistencia_es y attendance_en): Si el Excel no tiene números registrados, estima un número realista según el tipo de evento con el formato \"Número aproximado de participantes: X\" en español y \"Approximate number of participants: X\" en inglés.\n10. EVIDENCIA (evidencia_url): Si \"Evidencia URL/Ruta\" tiene un enlace o ruta real, consérvalo. Si dice \"SIN_IMAGEN_EN_EXCEL\", coloca \"https://via.placeholder.com/600x400?text=Evidencia+Evento+CUCEI\".\n</REGLAS_DE_AUTOCOMPLETADO_Y_TRADUCCION>\n\nFORMATO DE SALIDA OBLIGATORIO:\nDevuelve ÚNICAMENTE un ARREGLO JSON válido (Array: []) con un objeto por cada registro del lote. No uses bloques markdown.\nEstructura exacta de cada objeto en el Array:\n{\n  \"id_registro\": 1,\n  \"nombre_es\": \"...\",\n  \"nombre_en\": \"...\",\n  \"fecha_es\": \"DD/MM/2025\",\n  \"fecha_en\": \"MM/DD/2025\",\n  \"clasificacion_es\": \"...\",\n  \"clasificacion_en\": \"...\",\n  \"dependencia_es\": \"...\",\n  \"dependencia_en\": \"...\",\n  \"descripcion_general_es\": \"...\",\n  \"overview_en\": \"...\",\n  \"observaciones_es\": \"...\",\n  \"remarks_en\": \"...\",\n  \"nota_p1_es\": \"...\",\n  \"nota_p2_es\": \"...\",\n  \"nota_p3_es\": \"...\",\n  \"note_p1_en\": \"...\",\n  \"note_p2_en\": \"...\",\n  \"note_p3_en\": \"...\",\n  \"link_publicacion\": \"...\",\n  \"ods_lista_es\": [\"ODS 3: Salud y bienestar\"],\n  \"sdg_lista_en\": [\"SDG 3: Good Health and Well-being\"],\n  \"asistencia_es\": \"Número aproximado de participantes: 200\",\n  \"attendance_en\": \"Approximate number of participants: 200\",\n  \"evidencia_url\": \"...\"\n}\n\n<REGISTROS_A_ANALIZAR>\n{{ $json.LoteRegistrosExcel }}\n</REGISTROS_A_ANALIZAR>",
+        "options": {}
+      },
+      "id": "99227bfb-bff2-4f93-9651-b346cb631da3",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        720,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resIa = $input.all()[0];\nlet datosSalida = [];\n\nlet txtResp = resIa.json.output || resIa.json.text || (resIa.json.message && resIa.json.message.content) || \"\";\nlet txtLimpio = String(txtResp).replace(/```json/g, \"\").replace(/```/g, \"\").trim();\n\nlet matchJson = txtLimpio.match(/\\[[\\s\\S]*\\]/);\ntxtLimpio = matchJson ? matchJson[0] : \"[]\";\n\nlet arrDatos = [];\ntry {\n    arrDatos = JSON.parse(txtLimpio);\n} catch (e) {\n    arrDatos = [];\n}\n\nif (arrDatos.length === 0) {\n    datosSalida.push({\n        id_registro: \"ERROR\",\n        nombre_es: \"[ERROR] FALLO DE IA EN ESTE LOTE\",\n        html_individual: `<!-- ERROR DE FORMATO IA: ${String(txtResp).substring(0, 150)} -->`\n    });\n} else {\n    for (const d of arrDatos) {\n        const odsEsArr = Array.isArray(d.ods_lista_es) && d.ods_lista_es.length > 0 ? d.ods_lista_es : [\"ODS 4: Educacion de calidad\"];\n        const sdgEnArr = Array.isArray(d.sdg_lista_en) && d.sdg_lista_en.length > 0 ? d.sdg_lista_en : [\"SDG 4: Quality Education\"];\n\n        const odsEsUl = odsEsArr.map(o => `                <li>\\n                    <p>${o}</p>\\n                </li>`).join(\"\\n\");\n        const sdgEnUl = sdgEnArr.map(s => `                <li>\\n                    <p>${s}</p>\\n                </li>`).join(\"\\n\");\n\n        const linkPub = d.link_publicacion || \"https://www.facebook.com/udegcucei\";\n        const urlImg = d.evidencia_url || \"https://via.placeholder.com/600x400?text=Evidencia+Evento+CUCEI\";\n        const fechaEsExacta = d.fecha_es || \"Sin fecha\";\n        const fechaEnExacta = d.fecha_en || \"No date\";\n\n        const bloqueHtml = `<div class=\"content\">\n    <div class=\"field field--name-body field--type-text-with-summary field--label-above\">\n        <div class=\"field__label\">Body</div>\n        <div class=\"field__item\">\n\n            <h2>\n                <strong>${d.nombre_es || \"Evento CUCEI\"}</strong>\n            </h2>\n\n            <p>\n                <br>\n                <strong>Fecha:</strong>\n                \" ${fechaEsExacta}\"\n                <br>\n                <strong>Clasificación:</strong>\n                \" ${d.clasificacion_es || \"Otro\"}\"\n                <br>\n                <strong>Dependencia organizadora:</strong>\n                \" ${d.dependencia_es || \"CUCEI\"}\"\n            </p>\n\n            <p>\n                <strong>Descripción general</strong>\n                <br>\n                \" ${d.descripcion_general_es || \"\"}\"\n            </p>\n\n            <p>\n                <strong>Observaciones</strong>\n                <br>\n                \" ${d.observaciones_es || \"\"}\"\n            </p>\n\n            <p>\n                <strong>Nota completa:</strong>\n                <br>\n                \" ${d.nota_p1_es || \"\"}\"\n            </p>\n\n            <p>\n                \"${d.nota_p2_es || \"\"}\"\n            </p>\n\n            <p>\n                \"${d.nota_p3_es || \"\"}\"\n            </p>\n\n            <p>Esta actividad está alineada con el Objetivo de Desarrollo Sostenible:</p>\n\n            <ul>\n${odsEsUl}\n            </ul>\n\n            <p>\n                <strong>Enlaces de referencia</strong>\n                <br>\n                <a href=\"${linkPub}\" style=\"color:#1155cc; text-decoration:underline; font-family:Arial,sans-serif; font-size:11pt;\">Ver publicación en Facebook</a>\n            </p>\n\n            <p>\n                <strong>Impacto en Objetivos de Desarrollo Sostenible (ODS)</strong>\n            </p>\n\n            <ul>\n${odsEsUl}\n            </ul>\n\n            <p>\n                <strong>Datos de asistencia</strong>\n            </p>\n\n            <ul>\n                <li>\n                    <p>${d.asistencia_es || \"Número aproximado de participantes: 200\"}</p>\n                </li>\n            </ul>\n\n            <hr node=\"[object Object]\">\n\n            <p>English version:</p>\n\n            <h2>\n                <strong>${d.nombre_en || \"CUCEI Event\"}</strong>\n            </h2>\n\n            <p>\n                <br>\n                <strong>Date:</strong>\n                \" ${fechaEnExacta}\"\n                <br>\n                <strong>Category:</strong>\n                \" ${d.clasificacion_en || \"Other\"}\"\n                <br>\n                <strong>Organizing Department:</strong>\n                \" ${d.dependencia_en || \"CUCEI\"}\"\n            </p>\n\n            <p>\n                <strong>Overview</strong>\n                <br>\n                \" ${d.overview_en || \"\"}\"\n            </p>\n\n            <p>\n                <strong>Remarks</strong>\n                <br>\n                \" ${d.remarks_en || \"\"}\"\n            </p>\n\n            <p>\n                <strong>Full Note:</strong>\n                <br>\n                \" ${d.note_p1_en || \"\"}\"\n            </p>\n\n            <p>\n                \"${d.note_p2_en || \"\"}\"\n            </p>\n\n            <p>\n                \"${d.note_p3_en || \"\"}\"\n            </p>\n\n            <p>This activity aligns with the Sustainable Development Goal:</p>\n\n            <ul>\n${sdgEnUl}\n            </ul>\n\n            <p>\n                <strong>Reference Links</strong>\n                <br>\n                <a href=\"${linkPub}\" style=\"color:#1155cc; text-decoration:underline; font-family:Arial,sans-serif; font-size:11pt;\">See Facebook Publication</a>\n            </p>\n\n            <p>\n                <strong>Impact on Sustainable Development Goals (SDGs)</strong>\n            </p>\n\n            <ul>\n${sdgEnUl}\n            </ul>\n\n            <p>\n                <strong>Attendance Data</strong>\n            </p>\n\n            <ul>\n                <li>\n                    <p>${d.attendance_en || \"Approximate number of participants: 200\"}</p>\n                </li>\n            </ul>\n\n        </div>\n    </div>\n\n    <br>\n\n    <div class=\"field field--name-field-evidencia-foto field--type-image field--label-above\" style=\"margin-top: 20px; clear: both;\">\n        <div class=\"field__label\"><strong>Evidencia fotográfica / Photographic Evidence:</strong></div>\n        <div class=\"field__item\">\n            <br>\n            <img src=\"${urlImg}\" alt=\"Evidencia - ${d.nombre_es || \"Evento CUCEI\"}\" style=\"display: block; max-width: 600px; width: 100%; height: auto; margin: 12px 0; border-radius: 6px; object-fit: contain;\" />\n        </div>\n    </div>\n</div>`;\n\n        datosSalida.push({\n            id_registro: d.id_registro || \"\",\n            nombre_es: d.nombre_es || \"Sin nombre\",\n            fecha_es: fechaEsExacta,\n            clasificacion_es: d.clasificacion_es || \"\",\n            dependencia_es: d.dependencia_es || \"CUCEI\",\n            ods_lista_es: d.ods_lista_es || [],\n            link_publicacion: linkPub,\n            html_individual: bloqueHtml\n        });\n    }\n}\n\nreturn datosSalida.map(row => ({ json: row }));"
+      },
+      "id": "ed33ff0f-3707-4423-8c22-d969f9bcf2f6",
+      "name": "Parsear y Generar HTML JS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentBatch = $input.all();\nconst globalData = $getWorkflowStaticData('global');\n\nglobalData.htmlRows = globalData.htmlRows || [];\nglobalData.htmlRows = globalData.htmlRows.concat(currentBatch);\n\nreturn [{ json: { iteracion_ok: true, guardados_hasta_ahora: globalData.htmlRows.length } }];"
+      },
+      "id": "4096d568-89e6-4068-99c6-1868a5a70348",
+      "name": "Acumulador JS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 6
+      },
+      "id": "27d86fa5-1956-4ee5-a938-f869747092aa",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        416
+      ],
+      "webhookId": "3f21344c-b090-4299-a086-fcf1b3bac6af"
+    },
+    {
+      "parameters": {
+        "jsCode": "const globalData = $getWorkflowStaticData('global');\nconst finalRows = globalData.htmlRows || [];\n\nglobalData.htmlRows = [];\n\nif (finalRows.length === 0) {\n    return [{ json: { error: \"No se procesaron registros HTML en este ciclo.\" } }];\n}\n\nlet bloquesSeparados = \"\";\n\nfinalRows.forEach((item, index) => {\n    const r = item.json;\n    const num = r.id_registro || (index + 1);\n    const titulo = r.nombre_es || `Registro ${num}`;\n    const codigoHtml = r.html_individual || \"\";\n    \n    const fecha = r.fecha_es || \"Sin fecha\";\n    const categoria = r.clasificacion_es || \"Sin clasificación\";\n    const dependencia = r.dependencia_es || \"CUCEI\";\n    const enlaceFb = r.link_publicacion || \"https://www.facebook.com/udegcucei\";\n    \n    let odsArray = [];\n    if (r.ods_lista_es && Array.isArray(r.ods_lista_es)) {\n        odsArray = r.ods_lista_es;\n    }\n    const odsDisplay = odsArray.length > 0 ? odsArray[0] : \"Sin ODS\";\n    const odsJsonEscaped = JSON.stringify(odsArray).replace(/\"/g, '&quot;');\n\n    const escapedTitulo = titulo.replace(/\"/g, '&quot;');\n    const escapedHtml = codigoHtml\n        .replace(/&/g, \"&amp;\")\n        .replace(/</g, \"&lt;\")\n        .replace(/>/g, \"&gt;\");\n\n    bloquesSeparados += `\n<section class=\"registro-card\" data-id=\"${num}\" data-titulo=\"${escapedTitulo}\" data-fecha=\"${fecha}\" data-categoria=\"${categoria}\" data-dependencia=\"${dependencia}\" data-ods=\"${odsJsonEscaped}\">\n    <div class=\"registro-header\">\n        <span><strong>Registro #${num}:</strong> ${titulo}</span>\n        <div class=\"btn-group\">\n            <button class=\"copy-btn\" onclick=\"copyHtmlCode('raw-html-${num}', this)\">[COPIAR HTML]</button>\n            <button class=\"mark-btn\" onclick=\"markAsCopied('${num}')\">[MARCAR USADO]</button>\n            <a href=\"${enlaceFb}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"fb-btn\">[VER FB]</a>\n        </div>\n    </div>\n    <div class=\"card-meta\">\n        <span class=\"badge badge-date\">[FECHA] ${fecha}</span>\n        <span class=\"badge badge-cat\">[CAT] ${categoria}</span>\n        <span class=\"badge badge-dep\">[DEP] ${dependencia}</span>\n        <span class=\"badge badge-ods\" style=\"background:#dbeafe; color:#1e40af;\">[ODS] ${odsDisplay}</span>\n    </div>\n    <p class=\"instruccion\">Codigo HTML puro listo para copiar y pegar:</p>\n    <textarea id=\"raw-html-${num}\" class=\"html-box\" readonly>${escapedHtml}</textarea>\n    <details class=\"preview-box\">\n        <summary>[VISTA PREVIA] Ver renderizado del Registro #${num}</summary>\n        <div class=\"preview-render\">\n${codigoHtml}\n        </div>\n    </details>\n</section>\\n`;\n});\n\nconst masterDocument = `<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Catálogo Avanzado - Eventos CUCEI 2026</title>\n    <style>\n        :root { --primary: #003366; --btn: #0b57d0; --btn-hover: #0842a0; --bg: #f4f6f9; --card-bg: #ffffff; }\n        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); margin: 0; padding: 20px 40px; color: #222; }\n        h1 { color: var(--primary); margin-bottom: 5px; }\n        \n        .top-bar { display: flex; flex-wrap: wrap; gap: 12px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; align-items: center; border: 1px solid #d0d7de;}\n        .search-box { flex: 1; min-width: 250px; padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }\n        .filter-select { padding: 9px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; background: #fff; cursor: pointer; }\n        \n        .date-group { display: flex; align-items: center; gap: 6px; background: #f8f9fa; padding: 4px 10px; border-radius: 6px; border: 1px solid #dee2e6; }\n        .date-group label { font-size: 13px; font-weight: 600; color: #495057; }\n        .date-group input[type=\"date\"] { border: 1px solid #ccc; border-radius: 4px; padding: 5px; font-size: 13px; cursor: pointer;}\n        \n        #records-container { display: flex; flex-direction: column; gap: 20px; }\n        .registro-card { background: var(--card-bg); border: 1px solid #d0d7de; border-radius: 8px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); transition: all 0.3s ease; }\n        \n        .registro-card.is-copied { opacity: 0.55; filter: grayscale(85%); background: #e9ecef; border-color: #ced4da; }\n        .registro-card.is-copied .registro-header { background: #dee2e6; }\n        .registro-card.is-copied .mark-btn { background: #198754; pointer-events: none; }\n        .registro-card.is-copied .mark-btn::after { content: \" (Guardado)\"; }\n        \n        .registro-header { display: flex; justify-content: space-between; align-items: center; background: #eef2f7; padding: 12px 16px; border-radius: 6px; margin-bottom: 12px; }\n        \n        .btn-group { display: flex; gap: 8px; }\n        button, .fb-btn { padding: 8px 14px; border-radius: 5px; cursor: pointer; font-weight: 600; border: none; transition: 0.2s; font-size: 13px; box-sizing: border-box; font-family: inherit;}\n        .copy-btn { background: var(--btn); color: #fff; }\n        .copy-btn:hover { background: var(--btn-hover); }\n        .mark-btn { background: #6c757d; color: #fff; }\n        .mark-btn:hover { background: #5a6268; }\n        .fb-btn { background: #1877f2; color: #fff; text-decoration: none; display: inline-flex; align-items: center; }\n        .fb-btn:hover { background: #166fe5; color: #fff; }\n\n        .card-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; font-size: 12px; }\n        .badge { padding: 4px 8px; border-radius: 12px; background: #e2e8f0; color: #334155; font-weight: 500; }\n        \n        .html-box { width: 100%; height: 150px; font-family: Consolas, monospace; font-size: 12px; padding: 12px; border: 1px solid #ccc; border-radius: 4px; background: #1e1e1e; color: #d4d4d4; box-sizing: border-box; resize: vertical; }\n        .preview-box { margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; }\n        .preview-box summary { cursor: pointer; font-weight: bold; color: var(--btn); }\n        .preview-render { margin-top: 15px; padding: 20px; border: 1px solid #e0e0e0; background: #fafafa; border-radius: 6px; }\n        .instruccion { margin: 0 0 8px 0; font-size: 13px; color: #555; }\n        \n        .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 30px; padding-bottom: 40px; flex-wrap: wrap;}\n        .pagination button { background: #fff; border: 1px solid #d0d7de; color: #333; padding: 8px 14px; }\n        .pagination button:hover:not(:disabled) { background: #eef2f7; }\n        .pagination button.active { background: var(--primary); color: #fff; border-color: var(--primary); }\n        .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }\n        .stats { font-size: 14px; color: #555; margin-bottom: 15px; font-weight: 500;}\n    </style>\n</head>\n<body>\n    <h1>Catálogo Inteligente de Eventos CUCEI</h1>\n    \n    <div class=\"top-bar\">\n        <input type=\"text\" id=\"search-box\" class=\"search-box\" placeholder=\"🔍 Buscar por nombre (mín. 3 letras)...\">\n        \n        <div class=\"date-group\">\n            <label>📅 Desde:</label>\n            <input type=\"date\" id=\"filter-date-start\">\n            <label>Hasta:</label>\n            <input type=\"date\" id=\"filter-date-end\">\n        </div>\n        \n        <select id=\"filter-category\" class=\"filter-select\"><option value=\"\">📂 Todas las Clasificaciones</option></select>\n        <select id=\"filter-ods\" class=\"filter-select\"><option value=\"\">🌍 Todos los ODS</option></select>\n        <select id=\"filter-dept\" class=\"filter-select\"><option value=\"\">🏢 Todas las Dependencias</option></select>\n        <select id=\"filter-state\" class=\"filter-select\">\n            <option value=\"\">⚙️ Todos los estados</option>\n            <option value=\"new\" selected>✨ Solo Nuevos (Sin copiar)</option>\n            <option value=\"copied\">✅ Solo Ya Copiados</option>\n        </select>\n    </div>\n\n    <div class=\"stats\" id=\"stats-text\">Cargando registros...</div>\n\n    <div id=\"records-container\">\n${bloquesSeparados}\n    </div>\n\n    <div class=\"pagination\" id=\"pagination\"></div>\n\n    <script>\n        document.addEventListener(\"DOMContentLoaded\", () => {\n            const searchInput = document.getElementById('search-box');\n            const dateStart = document.getElementById('filter-date-start');\n            const dateEnd = document.getElementById('filter-date-end');\n            const filterCategory = document.getElementById('filter-category');\n            const filterOds = document.getElementById('filter-ods');\n            const filterDept = document.getElementById('filter-dept');\n            const filterState = document.getElementById('filter-state');\n            const container = document.getElementById('records-container');\n            const pagination = document.getElementById('pagination');\n            const statsText = document.getElementById('stats-text');\n            \n            const rawElements = Array.from(document.querySelectorAll('.registro-card'));\n            const copiedIds = JSON.parse(localStorage.getItem('cucei_copied_records') || '[]');\n            \n            function parseCustomDate(dStr) {\n                if(!dStr) return null;\n                const match = dStr.match(/(\\\\d{1,2})\\\\/(\\\\d{1,2})\\\\/(\\\\d{4})/);\n                if(match) {\n                    const day = parseInt(match[1], 10);\n                    const month = parseInt(match[2], 10) - 1;\n                    const year = parseInt(match[3], 10);\n                    return new Date(year, month, day);\n                }\n                return null;\n            }\n\n            const recordData = rawElements.map(el => {\n                const id = el.getAttribute('data-id');\n                const isCopied = copiedIds.includes(id);\n                if(isCopied) el.classList.add('is-copied');\n                \n                let odsArr = [];\n                try { odsArr = JSON.parse(el.getAttribute('data-ods')); } catch(e) {}\n\n                return {\n                    el: el,\n                    id: id,\n                    title: (el.getAttribute('data-titulo') || '').toLowerCase(),\n                    dateObj: parseCustomDate(el.getAttribute('data-fecha') || ''),\n                    category: el.getAttribute('data-categoria') || '',\n                    dept: el.getAttribute('data-dependencia') || '',\n                    odsList: odsArr,\n                    isCopied: isCopied\n                };\n            });\n\n            const itemsPerPage = 20;\n            let currentPage = 1;\n            let filtered = [];\n\n            function initDropdowns() {\n                const cats = [...new Set(recordData.map(r => r.category))].filter(Boolean).sort();\n                const depts = [...new Set(recordData.map(r => r.dept))].filter(Boolean).sort();\n                \n                let allOds = [];\n                recordData.forEach(r => { if(r.odsList) allOds = allOds.concat(r.odsList); });\n                const uniqueOds = [...new Set(allOds)].filter(Boolean).sort();\n\n                cats.forEach(c => filterCategory.add(new Option(c, c)));\n                uniqueOds.forEach(o => filterOds.add(new Option(o, o)));\n                depts.forEach(d => filterDept.add(new Option(d, d)));\n            }\n\n            function applyFilters() {\n                const q = searchInput.value.toLowerCase();\n                const vCat = filterCategory.value;\n                const vOds = filterOds.value;\n                const vDept = filterDept.value;\n                const vState = filterState.value;\n                \n                let dStart = dateStart.value ? new Date(dateStart.value + 'T00:00:00') : null;\n                let dEnd = dateEnd.value ? new Date(dateEnd.value + 'T23:59:59') : null;\n\n                filtered = recordData.filter(r => {\n                    const mSearch = q.length >= 3 ? r.title.includes(q) : true;\n                    const mCat = vCat ? r.category === vCat : true;\n                    const mDept = vDept ? r.dept === vDept : true;\n                    const mOds = vOds ? r.odsList.includes(vOds) : true;\n                    \n                    let mDate = true;\n                    if (dStart || dEnd) {\n                        if (!r.dateObj) {\n                            mDate = false; \n                        } else {\n                            if (dStart && r.dateObj < dStart) mDate = false;\n                            if (dEnd && r.dateObj > dEnd) mDate = false;\n                        }\n                    }\n\n                    let mState = true;\n                    if(vState === 'new') mState = !r.isCopied;\n                    if(vState === 'copied') mState = r.isCopied;\n\n                    return mSearch && mDate && mCat && mOds && mDept && mState;\n                });\n\n                filtered.sort((a, b) => {\n                    if (a.isCopied === b.isCopied) return parseInt(a.id) - parseInt(b.id);\n                    return a.isCopied ? 1 : -1;\n                });\n\n                currentPage = 1;\n                render();\n            }\n\n            function render() {\n                container.innerHTML = '';\n                const totalItems = filtered.length;\n                const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;\n                \n                if(currentPage > totalPages) currentPage = totalPages;\n\n                const startIdx = (currentPage - 1) * itemsPerPage;\n                const slice = filtered.slice(startIdx, startIdx + itemsPerPage);\n\n                slice.forEach(r => container.appendChild(r.el));\n\n                statsText.innerHTML = \\`Mostrando \\${slice.length} registros (de \\${totalItems} encontrados) | Página \\${currentPage} de \\${totalPages}\\`;\n                \n                renderPagination(totalPages);\n            }\n\n            function renderPagination(totalPages) {\n                pagination.innerHTML = '';\n                if (totalPages <= 1) return;\n\n                const btnPrev = document.createElement('button');\n                btnPrev.textContent = '« Anterior';\n                btnPrev.disabled = currentPage === 1;\n                btnPrev.onclick = () => { currentPage--; render(); window.scrollTo({top: 0, behavior: 'smooth'}); };\n                pagination.appendChild(btnPrev);\n\n                for (let i = 1; i <= totalPages; i++) {\n                    const btn = document.createElement('button');\n                    btn.textContent = i;\n                    if (i === currentPage) btn.classList.add('active');\n                    btn.onclick = () => { currentPage = i; render(); window.scrollTo({top: 0, behavior: 'smooth'}); };\n                    pagination.appendChild(btn);\n                }\n\n                const btnNext = document.createElement('button');\n                btnNext.textContent = 'Siguiente »';\n                btnNext.disabled = currentPage === totalPages;\n                btnNext.onclick = () => { currentPage++; render(); window.scrollTo({top: 0, behavior: 'smooth'}); };\n                pagination.appendChild(btnNext);\n            }\n\n            window.markAsCopied = function(id) {\n                const record = recordData.find(r => r.id == id);\n                if (!record || record.isCopied) return;\n\n                record.isCopied = true;\n                record.el.classList.add('is-copied');\n\n                let currentIds = JSON.parse(localStorage.getItem('cucei_copied_records') || '[]');\n                if (!currentIds.includes(id)) {\n                    currentIds.push(id.toString());\n                    localStorage.setItem('cucei_copied_records', JSON.stringify(currentIds));\n                }\n\n                applyFilters();\n            };\n\n            window.copyHtmlCode = function(textareaId, btnElement) {\n                const area = document.getElementById(textareaId);\n                navigator.clipboard.writeText(area.value).then(() => {\n                    const originalText = btnElement.innerText;\n                    btnElement.innerText = \"✅ ¡Copiado!\";\n                    btnElement.style.background = \"#188038\";\n                    setTimeout(() => {\n                        btnElement.innerText = originalText;\n                        btnElement.style.background = \"\"; \n                    }, 2000);\n                });\n            };\n\n            searchInput.addEventListener('input', applyFilters);\n            dateStart.addEventListener('change', applyFilters);\n            dateEnd.addEventListener('change', applyFilters);\n            filterCategory.addEventListener('change', applyFilters);\n            filterOds.addEventListener('change', applyFilters);\n            filterDept.addEventListener('change', applyFilters);\n            filterState.addEventListener('change', applyFilters);\n\n            initDropdowns();\n            applyFilters();\n        });\n    </script>\n</body>\n</html>`;\n\nreturn [{\n    json: {\n        total_registros_generados: finalRows.length,\n        archivo_salida: \"Eventos_CUCEI_2025_Bloques_HTML.html\"\n    },\n    binary: {\n        data: {\n            data: Buffer.from(masterDocument, 'utf8').toString('base64'),\n            mimeType: 'text/html',\n            fileName: 'Eventos_CUCEI_2025_Bloques_HTML.html',\n            fileExtension: 'html'\n        }\n    }\n}];"
+      },
+      "id": "bbe7d18b-c511-4b27-b869-96e9557df35e",
+      "name": "Extraer y Empaquetar HTML Final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "model": "meta.llama3-3-70b-instruct-v1:0",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAwsBedrock",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        624
+      ],
+      "id": "ff8b63c4-b217-45ba-9931-97d50127a0c5",
+      "name": "AWS Bedrock Chat Model",
+      "credentials": {
+        "aws": {
+          "id": "iHFoEoXWbGCsnw4O",
+          "name": "AWS (IAM) account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.19.0.1:8085/scrape-sync",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"page_url\": \"https://www.facebook.com/udegcucei\",\n  \"max_posts\": 0,\n  \"fecha_inicio\": \"2026-01-01\",\n  \"fecha_fin\": \"2026-11-03\",\n  \"dependencia_default\": \"Coordinación de Computación - CUCEI\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        48,
+        400
+      ],
+      "id": "38751358-4d84-4ae3-882f-be1ef0444ee3",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "1428838807",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        736,
+        160
+      ],
+      "id": "e0f291e1-24c2-4ea1-8db8-2006d83e3aa9",
+      "name": "Send a document",
+      "webhookId": "53f8d6eb-193e-40f4-8b2f-ac3a5570a918",
+      "credentials": {
+        "telegramApi": {
+          "id": "QTJ56JhnKlIWAHOP",
+          "name": "miJellyfinBot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Ejecutar Manualmente": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop": {
+      "main": [
+        [
+          {
+            "node": "Extraer y Empaquetar HTML Final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Lote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Lote": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parsear y Generar HTML JS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear y Generar HTML JS": {
+      "main": [
+        [
+          {
+            "node": "Acumulador JS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acumulador JS": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer y Empaquetar HTML Final": {
+      "main": [
+        [
+          {
+            "node": "Send a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AWS Bedrock Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0ddd35490db41533279804659210d06eecf3d8e76dc2aac3ec51389c63916cff"
+  }
+}

@@ -1,0 +1,36 @@
+# CREDENCIALES Y SESIONES
+cookies/*.json
+!cookies/*.example.json
+*.env
+.env.*
+!.env.example
+
+# PYTHON & PLAYWRIGHT
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.pytest_cache/
+playwright-report/
+test-results/
+
+# DATOS LOCALES Y ARCHIVOS GENERADOS N8N
+*.xlsx
+*.xls
+*.csv
+Eventos_CUCEI_*.html
+!examples/*.html
+
+# SISTEMA OPERATIVO Y EDITORES
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.log

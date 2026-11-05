@@ -1,0 +1,22 @@
+name: fb-cucei-scraper
+services:
+  fb-scraper:
+    build: .
+    container_name: fb-cucei-scraper
+    restart: unless-stopped
+    shm_size: '2gb'
+    ports:
+      - "8085:8000"
+    volumes:
+      - /DATA/AppData/fb-cucei-scraper/cookies:/app/cookies
+    environment:
+      - TZ=America/Mexico_City
+    x-casaos:
+      architectures:
+        - amd64
+        - arm64
+      main: fb-scraper
+      title:
+        en_us: CUCEI FB Scraper
+      icon: https://cdn-icons-png.flaticon.com/512/124/124010.png
+      port_map: "8085"
