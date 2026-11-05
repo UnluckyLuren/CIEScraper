@@ -129,4 +129,4 @@ Puedes probar la extracción directamente por terminal o desde el nodo `HTTP Req
 3. En el nodo `HTTP Request`, apunta la URL a la IP local de tu servidor (`http://La_IP:8085/scrape-sync`).
 4. Ejecuta el flujo y descarga el catálogo HTML resultante.
 
-**Desarrollado para la Coordinación de Ingeniería en Computación (CIE) - CUCEI, Universidad de Guadalajara.**
+**Desarrollado para la Coordinación de Ingeniería en Computación y para el Centro de Innovación y Emprendimiento (CIE) - CUCEI, Universidad de Guadalajara.**

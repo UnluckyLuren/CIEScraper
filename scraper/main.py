@@ -5,11 +5,12 @@ import random
 import re
 from datetime import datetime, timedelta
 from typing import Optional, List
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from fastapi import FastAPI
 from pydantic import BaseModel
 from playwright.async_api import async_playwright
 
-app = FastAPI(title="CUCEI FB Scraper", version="5.0.0")
+app = FastAPI(title="CUCEI FB Scraper API", version="5.2.0")
 
 ARCH_COOKIES = "/app/cookies/fb_cookies.json"
 
@@ -61,13 +62,47 @@ def limpiarCookies(cookiesCrudas: list) -> list:
         listaLimpia.append(itemCookie)
     return listaLimpia
 
+def limpiarUrlFb(urlCruda: str) -> str:
+    if not urlCruda:
+        return ""
+    u = urlCruda.strip()
+    if u.startswith("/"):
+        u = "https://www.facebook.com" + u
+    if not u.startswith("http"):
+        return ""
+    try:
+        parsed = urlparse(u)
+        qs = parse_qs(parsed.query)
+        paramsValidos = {}
+        for k in ["fbid", "story_fbid", "id", "v"]:
+            if k in qs:
+                paramsValidos[k] = qs[k][0]
+        nuevaQuery = urlencode(paramsValidos)
+        ruta = parsed.path.rstrip("/")
+        if "/photos/" in ruta and "/pcb." not in ruta:
+            partes = ruta.split("/")
+            if len(partes) >= 4 and partes[-1].isdigit():
+                return f"https://www.facebook.com/photo/?fbid={partes[-1]}"
+        return urlunparse((parsed.scheme, parsed.netloc, ruta, "", nuevaQuery, ""))
+    except Exception:
+        return u.split("&__cft__")[0].split("?__cft__")[0]
+
+def esUrlPostValida(url: str, urlBase: str) -> bool:
+    if not url:
+        return False
+    u = url.rstrip("/")
+    b = urlBase.rstrip("/")
+    if u == b or u == "https://www.facebook.com":
+        return False
+    patrones = ["/posts/", "/videos/", "/reel/", "/photos/", "/photo", "story_fbid=", "fbid=", "/events/"]
+    return any(p in u for p in patrones)
+
 def parsearFechaEsp(txtFecha: str) -> Optional[datetime]:
     if not txtFecha:
         return None
     s = txtFecha.lower().strip()
     ahora = datetime.now()
 
-    # Si viene como timestamp Unix
     if s.startswith("unix:"):
         try:
             ts = int(s.split(":")[1])
@@ -96,7 +131,6 @@ def parsearFechaEsp(txtFecha: str) -> Optional[datetime]:
     if mSem and len(s) < 20:
         return ahora - timedelta(weeks=int(mSem.group(1)))
 
-    # Formato abreviado
     mNum = re.search(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b", s)
     if mNum:
         try:
@@ -104,7 +138,6 @@ def parsearFechaEsp(txtFecha: str) -> Optional[datetime]:
         except ValueError:
             pass
 
-    # Formato en texto
     mTxt = re.search(r"(\d{1,2})\s*(?:de\s+)?([a-záéíóú]+)(?:\s*(?:de\s+|del\s+)?(\d{4}))?", s)
     if mTxt:
         dia = int(mTxt.group(1))
@@ -121,27 +154,40 @@ def parsearFechaEsp(txtFecha: str) -> Optional[datetime]:
                 pass
     return None
 
-def extraerFechasJsonFb(cuerpoTxt: str, mapaTiempoTexto: dict, mapaTiempoId: dict):
-    """Extrae creation_time / publish_time reales desde los paquetes internos de Facebook."""
+def extraerDatosJsonFb(cuerpoTxt: str, mapaTiempoTexto: dict, mapaUrlTexto: dict, mapaTiempoId: dict):
     try:
-        # Para buscar pares de texto y creation_time cercanos en la respuesta GraphQL/HTML
         for m in re.finditer(r'"text"\s*:\s*"((?:[^"\\]|\\.)*)"', cuerpoTxt):
-            fragIni = max(0, m.start() - 1500)
-            fragFin = min(len(cuerpoTxt), m.end() + 1500)
+            try:
+                txtDecod = json.loads(f'"{m.group(1)}"')
+            except Exception:
+                continue
+            llaveTxt = re.sub(r"\W+", "", txtDecod[:80]).lower()
+            if len(llaveTxt) <= 15:
+                continue
+
+            fragIni = max(0, m.start() - 2500)
+            fragFin = min(len(cuerpoTxt), m.end() + 2500)
             ventana = cuerpoTxt[fragIni:fragFin]
+
             mTime = re.search(r'"(?:creation_time|publish_time)"\s*:\s*(\d{10})\b', ventana)
             if mTime:
-                ts = int(mTime.group(1))
+                mapaTiempoTexto[llaveTxt] = int(mTime.group(1))
+
+            mUrl = re.search(r'"(?:permalink_url|url)"\s*:\s*"(https?:\\/\\/www\.facebook\.com\\/[^"]*(?:posts|videos|reel|photos|story_fbid|pfbid)[^"]*)"', ventana)
+            if mUrl:
                 try:
-                    txtDecod = json.loads(f'"{m.group(1)}"')
-                    llaveTxt = re.sub(r"\W+", "", txtDecod[:80]).lower()
-                    if len(llaveTxt) > 15:
-                        mapaTiempoTexto[llaveTxt] = ts
+                    urlDecod = json.loads(f'"{mUrl.group(1)}"')
+                    urlLimpia = limpiarUrlFb(urlDecod)
+                    if urlLimpia:
+                        mapaUrlTexto[llaveTxt] = urlLimpia
                 except Exception:
                     pass
+            else:
+                mPfbid = re.search(r'\b(pfbid[a-zA-Z0-9]{15,})\b', ventana)
+                if mPfbid and llaveTxt not in mapaUrlTexto:
+                    mapaUrlTexto[llaveTxt] = f"https://www.facebook.com/udegcucei/posts/{mPfbid.group(1)}"
 
-        # Iterar por post_id, story_fbid y pfbid
-        for mId in re.finditer(r'"(?:post_id|id|story_fbid)"\s*:\s*"(\d{10,25}|pfbid[a-zA-Z0-9]+)"', cuerpoTxt):
+        for mId in re.finditer(r'"(?:post_id|story_fbid)"\s*:\s*"(\d{10,25}|pfbid[a-zA-Z0-9]+)"', cuerpoTxt):
             idVal = mId.group(1)
             fragIni = max(0, mId.start() - 1200)
             fragFin = min(len(cuerpoTxt), mId.end() + 1200)
@@ -156,6 +202,7 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
     listaRes = []
     firmasVistas = set()
     mapaTiempoTexto = {}
+    mapaUrlTexto = {}
     mapaTiempoId = {}
 
     dtIni = datetime.strptime(pet.fecha_inicio, "%Y-%m-%d") if pet.fecha_inicio else None
@@ -196,14 +243,15 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
 
         pag = await ctx.new_page()
 
-        # Interceptamos respuestas de red para capturar las fechas de creacion
         async def escucharRed(resp):
             try:
                 urlResp = resp.url
-                if "graphql" in urlResp or "facebook.com/udegcucei" in urlResp:
-                    txt = await resp.text()
-                    if "creation_time" in txt or "publish_time" in txt:
-                        extraerFechasJsonFb(txt, mapaTiempoTexto, mapaTiempoId)
+                if "graphql" in urlResp or "facebook.com" in urlResp:
+                    ct = resp.headers.get("content-type", "")
+                    if "json" in ct or "javascript" in ct or "text" in ct or "html" in ct:
+                        txt = await resp.text()
+                        if "creation_time" in txt or "publish_time" in txt or "pfbid" in txt:
+                            extraerDatosJsonFb(txt, mapaTiempoTexto, mapaUrlTexto, mapaTiempoId)
             except Exception:
                 pass
 
@@ -215,10 +263,9 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
         await pag.goto(pet.page_url, wait_until="domcontentloaded", timeout=60000)
         await asyncio.sleep(3.5)
 
-        # Extraer las fechas en los scripts del HTML
         try:
             htmlInicial = await pag.content()
-            extraerFechasJsonFb(htmlInicial, mapaTiempoTexto, mapaTiempoId)
+            extraerDatosJsonFb(htmlInicial, mapaTiempoTexto, mapaUrlTexto, mapaTiempoId)
         except Exception:
             pass
 
@@ -240,16 +287,16 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
             numScroll += 1
             conteoPrev = len(listaRes)
 
-            # Desplegamos las de fechas haciendo hover
             await pag.evaluate("""() => {
-                document.querySelectorAll('a[href*="/posts/"], a[href*="/videos/"], a[href*="/photos/"], a[href*="story_fbid"]').forEach(a => {
+                document.querySelectorAll('a[role="link"], span[id] a, a[href*="/posts/"], a[href*="/videos/"], a[href*="/photo"]').forEach(a => {
                     try {
+                        a.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
                         a.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
                         a.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
                     } catch(e) {}
                 });
             }""")
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(0.35)
 
             loteDom = await pag.evaluate("""() => {
                 document.querySelectorAll('div[role="button"], span[role="button"]').forEach(btn => {
@@ -278,7 +325,7 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
                     }
                 });
 
-                document.querySelectorAll('a[href*="/posts/"], a[href*="/videos/"], a[href*="/reel/"], a[href*="story_fbid"], a[href*="pcb."]').forEach(a => {
+                document.querySelectorAll('a[href*="/posts/"], a[href*="/videos/"], a[href*="/reel/"], a[href*="story_fbid"], a[href*="fbid="]').forEach(a => {
                     if (a.closest('div[aria-label*="Comentario"], div[aria-label*="Comment"]')) return;
                     let act = a;
                     for (let i = 0; i < 10; i++) {
@@ -300,7 +347,6 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
                     let urlPost = "";
                     let pistaFecha = "";
 
-                    // Buscar etiquetas abbr o time con data-utime
                     const nodoTime = raiz.querySelector('abbr[data-utime], time[datetime]');
                     if (nodoTime) {
                         const utime = nodoTime.getAttribute('data-utime');
@@ -308,10 +354,12 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
                         else if (nodoTime.getAttribute('title')) pistaFecha = nodoTime.getAttribute('title');
                     }
 
-                    // Buscar en enlaces y atributos aria-label
                     const enlaces = raiz.querySelectorAll('a[href], span[aria-label], a[aria-label]');
+                    let mejorPrioridad = 99;
+
                     for (const el of enlaces) {
-                        const href = el.href || "";
+                        if (el.closest('div[aria-label*="Comentario"], div[aria-label*="Comment"]')) continue;
+                        const href = el.href || el.getAttribute("href") || "";
                         const txt = (el.innerText || "").trim();
                         const aria = (el.getAttribute("aria-label") || "").trim();
                         const title = (el.getAttribute("title") || "").trim();
@@ -323,19 +371,21 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
                             }
                         }
 
-                        if (!urlPost && href && (
-                            href.includes("/posts/") ||
-                            href.includes("/photos/") ||
-                            href.includes("/videos/") ||
-                            href.includes("story_fbid") ||
-                            href.includes("/reel/") ||
-                            href.includes("pcb.")
-                        ) && !href.includes("/hashtag/") && !href.includes("comment_id=")) {
-                            urlPost = href.split('?')[0];
+                        if (!href || href.includes("/hashtag/") || href.includes("comment_id=") || href.includes("dialog/share") || href.includes("/groups/")) {
+                            continue;
+                        }
+
+                        let prio = 99;
+                        if (href.includes("/posts/pfbid") || href.includes("story_fbid=")) prio = 1;
+                        else if (href.includes("/posts/") || href.includes("/videos/") || href.includes("/reel/") || href.includes("/events/")) prio = 2;
+                        else if (href.includes("fbid=") || href.includes("/photos/") || href.includes("/photo")) prio = 3;
+
+                        if (prio < mejorPrioridad) {
+                            mejorPrioridad = prio;
+                            urlPost = href;
                         }
                     }
 
-                    // Extraer el texto
                     let partesTxt = [];
                     const divsMsg = raiz.querySelectorAll('div[data-ad-preview="message"], div[data-ad-comet-preview="message"], div[dir="auto"]');
                     divsMsg.forEach(d => {
@@ -352,13 +402,11 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
 
                     const txtCompleto = [...new Set(partesTxt)].join("\\n").trim();
 
-                    // Si aun no hay pistaFecha en el header entonces buscamos fecha explicita dentro del propio texto del post
                     if (!pistaFecha && txtCompleto) {
                         const mEnTexto = txtCompleto.match(/(\\d{1,2}\\s+de\\s+[a-záéíóú]+\\s+de\\s+\\d{4}|\\d{1,2}[/-]\\d{1,2}[/-]\\d{4})/i);
                         if (mEnTexto) pistaFecha = mEnTexto[1];
                     }
 
-                    // Extraer la imagen principal
                     let urlImg = "";
                     const imgs = raiz.querySelectorAll('img[src]');
                     for (const img of imgs) {
@@ -404,13 +452,24 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
                 if not firma or firma in firmasVistas:
                     continue
 
-                dtPub = None
                 llaveBusquedaTxt = re.sub(r"\W+", "", item["texto"][:80]).lower()
+
+                urlDomLimpia = limpiarUrlFb(item.get("url", ""))
+                urlFinal = ""
+
+                if esUrlPostValida(urlDomLimpia, pet.page_url):
+                    urlFinal = urlDomLimpia
+                elif llaveBusquedaTxt in mapaUrlTexto:
+                    urlFinal = mapaUrlTexto[llaveBusquedaTxt]
+                else:
+                    urlFinal = pet.page_url
+
+                dtPub = None
                 if llaveBusquedaTxt in mapaTiempoTexto:
                     dtPub = datetime.fromtimestamp(mapaTiempoTexto[llaveBusquedaTxt])
                 else:
                     for idPost, tsVal in mapaTiempoId.items():
-                        if idPost in item["url"]:
+                        if urlFinal and idPost in urlFinal:
                             dtPub = datetime.fromtimestamp(tsVal)
                             break
 
@@ -434,7 +493,7 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
                     "nombre": "[FALTA - INFERIR DE DESCRIPCION]",
                     "fecha": fechaFinal,
                     "clasificacion": "[FALTA - CLASIFICAR]",
-                    "link_publicacion": item["url"] or pet.page_url,
+                    "link_publicacion": urlFinal,
                     "dependencia": pet.dependencia_default,
                     "carpeta_evidencia": item["img"] or "",
                     "descripcion_corta": item["texto"],
@@ -459,7 +518,7 @@ async def extraerPubsFb(pet: PeticionScrap) -> List[dict]:
                 scrollsVacios = 0
 
             if scrollsVacios >= 8:
-                print("[WARN]El DOM dejo de entregar publicaciones nuevas.")
+                print("[WARN] El DOM dejo de entregar publicaciones nuevas.")
                 break
 
             pasoScroll = random.randint(1600, 2400)
